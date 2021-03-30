@@ -37,4 +37,65 @@ In Sumologic account, you need to create [HTTP custom collector app](https://hel
 
 1. In the Oracle Cloud Infrastructure console, click the Navigation menu, select **Log Groups** under the **Logging** menu.
 
-2. To create a log group, click  **Create Log Group**.
+2. To create a log group, click **Create Log Group**.
+![enter image description here](https://github.com/mayur-oci/sumologic/blob/main/loggroupSL0.png?raw=true)
+
+3. Select your compartment, add a name **LogGroupForBucketActivity,** and a **description**.
+![enter image description here](https://github.com/mayur-oci/sumologic/blob/main/loggroupsl.png?raw=true)
+
+4. After you create **Log Group**, select **Logs** in the left menu. You will see screen similar to shown below.
+![enter image description here](https://github.com/mayur-oci/sumologic/blob/main/enableLogs2fs.png?raw=true)
+
+5. Click **Enable Service Log**, fill our the dialog box and click **Enable Log**. Select **Log Category** on Service.
+
+-   Resource: Enter the log that you will use as a resource.
+-   Log name: Enter a name for your log, for example,  **logForBucketActivity**.
+
+Fill the rest of the fields appropriately. Refer to this example, in which Oracle Object Store with a bucket name  **BucketForSumoLogic**  is shown. Make sure you select loggroup **LogGroupForBucketActivity** for the log, you just created in previous step.
+![enter image description here](https://github.com/mayur-oci/sumologic/blob/main/enableObjectLogs.png?raw=true)
+
+Now everytime a object is uploaded to bucket **BucketForSumoLogic**, logentry will be added to log **logForBucketActivity**. 
+
+## Configure Oracle Function for ingesting logs into SumoLogic
+
+1.  Click on the Navigation menu and then select the **Solution and Platform**  section. Select **Functions**  under the **Developer Services**  menu.  
+    
+2.  Click  **Create Application**  and enter a name, for example,  **sumologicFnApp**. 
+![enter image description here](https://github.com/mayur-oci/sumologic/blob/main/fnApp.png?raw=true)
+3. Once you create the  **Application**, click your application name and select **Getting Started**  on the left menu.
+![enter image description here](https://github.com/mayur-oci/sumologic/blob/main/cloudShell.png?raw=true)
+
+4.  Launch Cloud Shell.
+5.  Use the context for your region.
+    ```Shell
+    fn list context
+    fn use context us-ashburn-1
+    ```
+6. Update the context with the function’s compartment ID.    
+	```Shell
+    fn update context oracle.compartment-id <compartment-id>
+	```
+7. Update the context with the location of the Registry you want to use.
+	```Shell
+    fn update context registry iad.ocir.io/<tenancy_name>/[YOUR-OCIR-REPO]
+	```
+	   Replace iad with the three-digit region code.
+8. Assuming you have created the [Auth Token](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionsgenerateauthtokens.htm#Generate_an_Auth_Token_to_Enable_Login_to_Oracle_Cloud_Infrastructure_Registry) already, log into the Registry using the **Auth Token** as your password.
+	```Shell
+    docker login iad.ocir.io
+	```
+Replace iad with the three-digit region code.
+You are prompted for the following information:
+
+-   Username: <tenancyname>/<username>
+-   Password: Create a password
+
+**Note**: If you are using Oracle Identity Cloud Service, your username is <tenancyname>/oracleidentitycloudservice/<username>.	
+
+9.  Generate a ‘hello-world’ boilerplate function.
+	```Shell
+    fn init --runtime python sumologicfn
+	``` 
+	The  **fn init**  command will generate a folder called  **datadog**  with 3 files inside;  **func.py**,  **func.yaml,**  and **requirements.txt**.
+
+Open  **func.py**  and replace the content of the file with the following code:
