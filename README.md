@@ -99,3 +99,60 @@ You are prompted for the following information:
 	The  **fn init**  command will generate a folder called  **datadog**  with 3 files inside;  **func.py**,  **func.yaml,**  and **requirements.txt**.
 
 Open  **func.py**  and replace the content of the file with the following code:
+
+	```Python
+	
+    import io
+	import json
+	import logging
+	import os
+
+	import requests
+	from fdk import response
+
+
+	def handler(ctx, data: io.BytesIO = None):
+	    logger = logging.getLogger()
+	    logger.info("function start")
+
+	    #Sumologic endpoint URL to upload OCI logs to HTTP custom app.
+	    #this value is defined in func.yaml
+	    sumologic_endpoint = os.environ['SUMOLOGIC_ENDPOINT']
+
+	    #Retrieving the log entrie(s) via Service Connector Hub as part of the Function call payload
+	    try:
+	        logentries = json.loads(data.getvalue())
+	        if not isinstance(logentries, list):
+	            logger.error('Invalid connector payload. No log queries detected')
+	            raise
+
+	        logger.info("json input from SCH")
+	        logger.info(data.getvalue())
+
+
+	        for logEntry in logentries:
+	            logger.info("Extracting/Processing log details from the log entry json")
+	            event_name = logEntry["data"]["requestResourcePath"] + '\t'
+	            time_of_event = logEntry["time"] + '\t'
+	            cmpt_name = logEntry["data"]["compartmentName"] + '\t'
+	            bucket_namespace = logEntry["data"]["namespaceName"] + '\t'
+	            bucket_name = logEntry["data"]["bucketName"] + '\t'
+	            request_action = logEntry["data"]["requestAction"]
+
+	            log_line = time_of_event + event_name + cmpt_name + \
+	                       bucket_namespace + bucket_name + request_action
+
+	            #Call the Sumologic with the payload.
+	            headers = {'Content-type': 'text/plain'}
+	            response_from_sumologic = requests.post(sumologic_endpoint,
+	                                                    data=log_line,
+	                                                    headers=headers)
+	            logging.getLogger().info(response_from_sumologic.text)
+
+	    logger.info("function end")
+	    return
+
+	    except Exception as e:
+	        logger.error("Failure in the function: {}".format(str(e)))
+	        raise
+	```
